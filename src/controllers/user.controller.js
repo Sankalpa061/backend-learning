@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 
@@ -249,32 +249,37 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
 
 const updateUserAvatar = asyncHandler(async(req,res)=>{
     const avatarLocalPath = req.file?.path
-    if(!avatarLocalPath){
-        throw new ApiError(400,"Avatar file is missing!!");
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar file is missing")
     }
+
+    //TODO: delete old image - assignment
+
     const avatar = await uploadOnCloudinary(avatarLocalPath)
 
-    if(!avatar.url){
-        throw new ApiError(500,"Error while uploading on avatar!!");
+    if (!avatar.url) {
+        throw new ApiError(400, "Error while uploading on avatar")
+        
     }
-    const user = await User.findByIdAndUpdate(req.user?._id,
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
         {
             $set:{
                 avatar: avatar.url
             }
         },
-        {
-            new:true
-        }
+        {new: true}
     ).select("-password")
+
     return res
     .status(200)
     .json(
-        new ApiResponse(200,user,"Avatar updated successfully!!")
+        new ApiResponse(200, user, "Avatar image updated successfully")
     )
-
-
 })
+
 const updateUserCoverImage = asyncHandler(async(req,res)=>{
     const coverImageLocalPath = req.file?.path
     if(!coverImageLocalPath){
@@ -364,7 +369,9 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
         }
     ])
 
-    if (!channel.length) {
+    console.log(channel);
+
+    if (!channel?.length) {
         throw new ApiError(404, "Channel doesnot exist!!")
     }
 
