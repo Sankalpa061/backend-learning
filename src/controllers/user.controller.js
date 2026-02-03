@@ -1,11 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
-import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
+import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
-import { response } from "express"
 
 const generateAccessAndRefreshToken = async(userId)=>{
     try {
@@ -138,8 +137,8 @@ const loginUser = asyncHandler(async (req,res) =>{
 const logoutUser = asyncHandler( async(req,res)=>{
     await User.findByIdAndUpdate(req.user._id,
         {
-        $set: {
-            refreshToken: undefined
+        $unset: {
+            refreshToken: 1
         }
         },
         {
@@ -169,7 +168,7 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
     try {
         const decodedToken = jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
     
-        const user = await user.findById(decodedToken?._id)
+        const user = await User.findById(decodedToken?._id)
     
         if (!user) {
             throw new ApiError(401,"Invalid refresh token!!")
@@ -194,7 +193,7 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
             new ApiResponse(200,{accessToken, refreshToken: newRefreshToken},"Access Token Refreshed!!")
         )
     } catch (error) {
-        throw ApiError(401, error?.message || "Invalid refresh token!!")
+        throw new ApiError(401, error?.message || "Invalid refresh token!!")
     }
 })
 
@@ -227,7 +226,7 @@ const getCurrentUser = asyncHandler(async(req,res)=>{
 })
 
 const updateAccountDetails = asyncHandler(async(req,res)=>{
-    const {fullName,email,} = req.body
+    const {fullName,email} = req.body
 
     if(!fullName || !email){
         throw new ApiError(400, "All fields are required!!");
