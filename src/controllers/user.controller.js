@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
+import cloudinary from "cloudinary"
 
 const generateAccessAndRefreshToken = async(userId)=>{
     try {
@@ -254,32 +255,73 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar file is missing")
     }
-
     //TODO: delete old image - assignment
+    const user = await User.findById(req.user?._id);
+    if(user?.avatar){
+        const url = user.avatar;
+        let publicId = url.split("/upload/")[1].split(".")[0];
+        if (publicId.startsWith("v")) {
+        publicId = publicId.split("/").slice(1).join("/");
+        }
+        if(publicId){
+            await cloudinary.uploader.destroy(publicId);
+        }
+    }
+
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
 
     if (!avatar.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-        
+        throw new ApiError(400, "Error while uploading on avatar") 
     }
 
-    const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-            $set:{
-                avatar: avatar.url
-            }
-        },
-        {new: true}
-    ).select("-password")
+    const updatedUser = await User.findByIdAndUpdate(req.user?._id,{
+        $set: {
+            avatar: avatar.url
+        }
+    },{
+        new: true
+    }).select("-password");
 
     return res
     .status(200)
     .json(
-        new ApiResponse(200, user, "Avatar image updated successfully")
+        new ApiResponse(200, updatedUser, "Avatar image updated successfully")
     )
 })
+
+// const updateUserAvatar = asyncHandler(async(req,res)=>{
+//     const avatarLocalPath = req.file?.path
+
+//     if (!avatarLocalPath) {
+//         throw new ApiError(400, "Avatar file is missing")
+//     }
+
+//     //TODO: delete old image - assignment
+
+//     const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+//     if (!avatar.url) {
+//         throw new ApiError(400, "Error while uploading on avatar")
+        
+//     }
+
+//     const user = await User.findByIdAndUpdate(
+//         req.user?._id,
+//         {
+//             $set:{
+//                 avatar: avatar.url
+//             }
+//         },
+//         {new: true}
+//     ).select("-password")
+
+//     return res
+//     .status(200)
+//     .json(
+//         new ApiResponse(200, user, "Avatar image updated successfully")
+//     )
+// })
 
 const updateUserCoverImage = asyncHandler(async(req,res)=>{
     const coverImageLocalPath = req.file?.path
