@@ -10,6 +10,50 @@ import cloudinary from "cloudinary"
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+
+    const pageNumber = parseInt(page)
+    const limitNumber = parseInt(limit)
+    const skip = (pageNumber - 1 )*limitNumber;
+    
+    const filter ={};
+
+    if (query) {
+        filter.$or = [
+            {
+            title:{$regex: query, $options:"i"}
+            },
+            {
+                description:{$regex: query, $options:"i"}
+            }
+        ]
+    }
+
+    if(userId){
+        filter.owner = userId;
+    }
+
+    const sort = {};
+    if(sortBy){
+        sort[sortBy] = sortType === "asc" ? 1:-1;
+    } else {
+        sort.createdAt = -1;
+    }
+
+    const totalVideos = await Video.countDocuments(filter);
+    const videos = await Video.find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(limitNumber);
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,{videos,
+            totalVideos,
+            totalPage : Math.ceil(totalVideos/limitNumber)
+        },"All the videos acquired!!")
+    )
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
