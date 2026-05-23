@@ -41,10 +41,6 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     if (!commentId) {
         throw new ApiError(400,"Comment ID must be provided!!")
     }
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-        throw new ApiError(404, "Comment Not Found!!")
-    }
     const filter = {};
     filter.comment = commentId;
     filter.likedBy = req.user._id;
